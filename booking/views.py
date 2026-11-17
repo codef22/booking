@@ -35,8 +35,7 @@ class ServiceDetailAPIView(APIView):
     def get(self, request, pk):
         service = get_object_or_404(
             ServiceOffering,
-            pk=pk,
-            is_active=True
+            pk=pk, is_active=True
         )
         
         serializer = ServiceOfferingSerializer(service)
