@@ -14,3 +14,10 @@ class ServiceOfferingSerializer(serializers.Serializer):
 
     is_active = serializers.BooleanField()
 
+class ServiceSummarySerializer(serializers.Serializer):
+    id = serializers.IntegerField(read_only=True)
+
+    title = serializers.CharField()
+    
+    duration_minutes = serializers.IntegerField()
+
