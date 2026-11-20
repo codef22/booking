@@ -1,3 +1,4 @@
+from rest_framework import status, generics, mixins
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
@@ -5,13 +6,7 @@ from rest_framework.permissions import AllowAny
 from django.shortcuts import get_object_or_404
 
 from booking.models import ServiceOffering
-from booking.serializers import (
-    ServiceOfferingSerializer,
-    ServiceSummarySerializer,
-)
-
-from django.db.models import Q
-from rest_framework import status
+from booking.serializers import ServiceOfferingSerializer
 
 
 class HealthCheckAPIView(APIView):
@@ -24,73 +19,85 @@ class HealthCheckAPIView(APIView):
         })
 
 
-class ServicesListApiView(APIView):
+class ServicesListApiView(
+    mixins.ListModelMixin,
+    mixins.CreateModelMixin,
+    generics.GenericAPIView
+):
+    serializer_class = ServiceOfferingSerializer
     permission_classes = [AllowAny]
 
-    def get(self, request):
-        services = ServiceOffering.objects.filter(is_active=True).order_by("id")
+    def get_queryset(self):
+        return ServiceOffering.objects.filter(is_active=True).order_by("id")
 
-        #search
-        search = request.query_params.get("search")
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
 
-        if search:
-            services = services.filter(
-                title__icontains=search
-            )
+    def post(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
 
-        # Max Duration
-        max_duration = request.query_params.get("max_duration")
 
-        if max_duration is not None:
-            try:
-                max_duration = int(max_duration)
+class ServicesListV2ApiView(
+    generics.ListCreateAPIView
+):
+    serializer_class = ServiceOfferingSerializer
+    permission_classes = [AllowAny]
 
-                if max_duration < 0:
-                    return Response(
-                        {"error": "max_duration must be a non-negative integer."},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-
-            except (ValueError, TypeError):
-                return Response(
-                    {"error": "max_duration must be a valid integer."},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
-            services = services.filter(
-                duration_minutes__lte=max_duration
-            )
-        
-        serializer = ServiceOfferingSerializer(services, many=True)
-
-        return Response(serializer.data)
+    def get_queryset(self):
+        return ServiceOffering.objects.filter(is_active=True).order_by("id")
 
 
 class ServiceDetailAPIView(APIView):
     permission_classes = [AllowAny]
 
-    def get(self, request, pk):
-        service = get_object_or_404(
+
+    def get_object(self, pk):
+        return get_object_or_404(
             ServiceOffering,
-            pk=pk, 
-            is_active=True
+            pk=pk,
+            is_active=True,
         )
+
+
+    def get(self, request, pk):
+        service = self.get_object(pk)
         
         serializer = ServiceOfferingSerializer(service)
 
         return Response(serializer.data)
 
-class ServiceSummaryAPIView(APIView):
-    permission_classes = [AllowAny]
+    def put(self, request, pk):
+        service = self.get_object(pk)
 
-    def get(self, request):
-        services = ServiceOffering.objects.filter(
-            is_active=True
-        ).order_by("id")
-
-        serializer = ServiceSummarySerializer(
-            services,
-            many=True
+        serializer = ServiceOfferingSerializer(
+            service,
+            data=request.data,
         )
 
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
         return Response(serializer.data)
+
+    def patch(self, request, pk):
+        service = self.get_object(pk)
+
+        serializer = ServiceOfferingSerializer(
+            service,
+            data=request.data,
+            partial=True,
+        )
+
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(serializer.data)
+
+
+class ServiceDetailV2APIView(generics.RetrieveUpdateAPIView):
+    queryset = ServiceOffering.objects.filter(
+        is_active=True
+    )
+
+    serializer_class = ServiceOfferingSerializer
+    permission_classes = [AllowAny]

@@ -1,23 +1,42 @@
 from rest_framework import serializers
 
+from booking.models import ServiceOffering
 
-class ServiceOfferingSerializer(serializers.Serializer):
-    id = serializers.IntegerField(read_only=True)
 
-    title = serializers.CharField()
+class ServiceOfferingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ServiceOffering
+        fields = [
+            "id",
+            "title",
+            "description",
+            "duration_minutes",
+            "price",
+            "is_active"
+        ]
+        read_only_fields = [
+            "id",
+            "is_active"
+        ]
 
-    description = serializers.CharField()
+    def validate_title(self, value):
+        if len(value.strip()) < 5:
+            raise serializers.ValidationError(
+                "Title must have at least 5 char."
+            )
 
-    duration_minutes = serializers.IntegerField()
+        return value.strip()
 
-    price = serializers.IntegerField()
+    def validate(self, attrs):
+        duration = attrs.get("duration_minutes")
+        price = attrs.get("price")
 
-    is_active = serializers.BooleanField()
+        if duration is not None and price is not None:
+            if duration > 120 and price == 0:
+                raise serializers.ValidationError({
+                    "price": (
+                        "Service longer than 120 minute cannot be free."
+                    )
+                })
 
-class ServiceSummarySerializer(serializers.Serializer):
-    id = serializers.IntegerField(read_only=True)
-
-    title = serializers.CharField()
-    
-    duration_minutes = serializers.IntegerField()
-
+        return attrs
