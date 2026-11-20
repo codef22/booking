@@ -93,6 +93,17 @@ class ServiceDetailAPIView(APIView):
 
         return Response(serializer.data)
 
+    def delete(self, request, pk):
+        service = self.get_object(pk)
+
+        service.is_active = False
+
+        service.save(update_fields=["is_active"])
+
+        return Response(
+            status=status.HTTP_204_NO_CONTENT
+        )
+
 
 class ServiceDetailV2APIView(generics.RetrieveUpdateAPIView):
     queryset = ServiceOffering.objects.filter(
@@ -101,3 +112,35 @@ class ServiceDetailV2APIView(generics.RetrieveUpdateAPIView):
 
     serializer_class = ServiceOfferingSerializer
     permission_classes = [AllowAny]
+
+class ServiceDetailV3APIView(
+    mixins.DestroyModelMixin,
+    generics.RetrieveUpdateAPIView
+):
+
+    queryset = ServiceOffering.objects.filter(is_active=True)
+    serializer_class = ServiceOfferingSerializer
+    permission_classes = [AllowAny]
+
+    def perform_destroy(self, instance):
+        instance.is_active = False
+        instance.save(update_fields=["is_active"])
+
+    def delete(self, request, *args, **kwargs):
+        return self.destroy(request, *args, **kwargs)
+
+class ServiceDeleteAPIView(APIView):
+
+    permission_classes = [AllowAny]
+
+    def delete(self, request, pk):
+        service = get_object_or_404(
+            ServiceOffering,
+            pk=pk,
+            is_active=True
+        )
+
+        service.is_active = False
+        service.save(update_fields=["is_active"])
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
