@@ -33,7 +33,7 @@ class ServiceOfferingViewSet(ModelViewSet):
     def get_queryset(self):
         queryset = ServiceOffering.objects.all()
 
-        if self.action in ["list", "retrieve"]:
+        if self.action in ["list", "retrieve", "activate"]:
             return queryset
 
         return queryset.filter(is_active=True)
@@ -51,7 +51,7 @@ class ServiceOfferingViewSet(ModelViewSet):
 
     @action(
         detail=True,
-        methods=["get"],
+        methods=["post"],
         url_path="deactivate"
     )
     def deactivate(self, request, pk=None):
@@ -64,7 +64,37 @@ class ServiceOfferingViewSet(ModelViewSet):
             {"message": "Serivice deactivated."},
             status=status.HTTP_200_OK
         )
+    #activate
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="activate"
+    )
+    def activate(self, request, pk=None):
+        service = self.get_object()
 
+        service.is_active = True
+        service.save(update_fields=["is_active"])
+
+        return Response(
+            {"message": "Serivice activated."},
+            status=status.HTTP_200_OK
+        )
+    #shomaresh khadamat faal
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="active-count"
+    )
+    def active_count(self, request):
+        count = ServiceOffering.objects.filter(
+        is_active=True
+        ).count()
+
+        return Response(
+            {"active_services": count},
+            status=status.HTTP_200_OK
+        )
 
 class ServicesListApiView(
     mixins.ListModelMixin,
