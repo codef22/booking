@@ -27,24 +27,6 @@ class ServiceOfferingSerializer(serializers.ModelSerializer):
 
         return value.strip()
 
-    # اعتبارسنجی قیمت
-    def validate_price(self, value):
-        if value < 0:
-            raise serializers.ValidationError(
-                "price can't be negetive."
-            )
-
-        return value
-    
-    # اعتبارسنجی مدت زمان خدمت
-    def validate_duration_minutes(self, value):
-        if value <15 or value >180:
-            raise serializers.ValidationError(
-                "duration must be between 15 min and 180 min"
-            )
-
-        return value
-
     def validate(self, attrs):
         duration = attrs.get("duration_minutes")
         price = attrs.get("price")
@@ -58,5 +40,3 @@ class ServiceOfferingSerializer(serializers.ModelSerializer):
                 })
 
         return attrs
-
-   
