@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.utils import timezone
 
 from booking.models import (
     ServiceOffering,
@@ -102,21 +103,21 @@ class ServiceSummarySerializer(
             "price",
         ]
 
+#
+# class ProviderDetailSerializer(
+#     ProviderProfileSerializer
+# ):
+#     services = ServiceSummarySerializer(
+#         many=True,
+#         read_only=True
+#     )
 
-class ProviderDetailSerializer(
-    ProviderProfileSerializer
-):
-    services = ServiceSummarySerializer(
-        many=True,
-        read_only=True
-    )
-
-    class Meta(ProviderProfileSerializer.Meta):
-        fields = (
-            ProviderProfileSerializer.Meta.fields
-            + ["services"]
-        )
-
+#     class Meta(ProviderProfileSerializer.Meta):
+#         fields = (
+#             ProviderProfileSerializer.Meta.fields
+#             + ["services"]
+#         )
+#
 
 
 class AvailabilitySlotSerializer(serializers.ModelSerializer):
@@ -141,6 +142,28 @@ class AvailabilitySlotSerializer(serializers.ModelSerializer):
             getattr(self.instance, "end_at", None)
         )
 
+        # بررسی زمان گذشته
+        if "start_at" in attrs:
+
+            new_start = attrs["start_at"]
+
+            if self.instance is None:
+                # هنگام Create
+                if new_start < timezone.now():
+                    raise serializers.ValidationError({
+                        "start_at": "Start time cannot be in the past."
+                    })
+
+            else:
+                # هنگام Update
+                old_start = self.instance.start_at
+
+                if new_start != old_start:
+                    if new_start < timezone.now():
+                        raise serializers.ValidationError({
+                            "start_at": "Start time cannot be in the past."
+                        })
+         # بررسی زمان پایان
         if start is not None and end is not None:
             if end <= start:
                 raise serializers.ValidationError({
@@ -148,3 +171,40 @@ class AvailabilitySlotSerializer(serializers.ModelSerializer):
                 })
 
         return attrs
+
+
+#tamrin 1
+
+class AvailabilitySlotSummarySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AvailabilitySlot
+        fields = [
+            "id",
+            "start_at",
+            "end_at",
+            "is_active",
+        ]
+
+class ProviderDetailSerializer(
+    ProviderProfileSerializer
+):
+    services = ServiceSummarySerializer(
+        many=True,
+        read_only=True
+    )
+ 
+    slots = serializers.SerializerMethodField()
+
+    def get_slots(self, obj):
+        active_slots = obj.slots.filter(is_active=True)
+
+        return AvailabilitySlotSummarySerializer(
+            active_slots,
+            many=True
+        ).data
+
+    class Meta(ProviderProfileSerializer.Meta):
+        fields = (
+            ProviderProfileSerializer.Meta.fields
+            + ["services", "slots"]
+        )

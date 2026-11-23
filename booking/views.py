@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 
 from django.shortcuts import get_object_or_404
+from rest_framework.exceptions import ValidationError
 
 from booking.models import (
     ServiceOffering,
@@ -109,10 +110,30 @@ class AvailabilitySlotViewSet(ModelViewSet):
 
     queryset = AvailabilitySlot.objects.all()
 
+    # def get_queryset(self):
+    #     return AvailabilitySlot.objects.select_related(
+    #         "provider"
+    #     ).order_by("start_at")
     def get_queryset(self):
-        return AvailabilitySlot.objects.select_related(
+
+        queryset = AvailabilitySlot.objects.select_related(
             "provider"
         ).order_by("start_at")
+
+        provider_id = self.request.query_params.get("provider_id")
+
+        if provider_id is not None:
+
+            if not provider_id.isdigit():
+                 raise ValidationError({
+                    "provider_id": "Provider ID must be a number."
+                })
+
+            queryset = queryset.filter(
+                provider_id=provider_id
+            )
+
+        return queryset
 
 
 class ServicesListApiView(
