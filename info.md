@@ -40,3 +40,12 @@ ProviderProfile
 ServiceOffering
 AvailabilitySlot
 Booking
+
+
+--------------
+start at = 10:00
+end at = 11:00
+
+{
+  "end_at": "2026-11-21T09:00:00+03:30"
+}

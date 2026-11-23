@@ -4,6 +4,8 @@ from rest_framework.routers import DefaultRouter
 
 from booking.views import (
     ServiceOfferingViewSet,
+    ProviderViewSet, 
+    AvailabilitySlotViewSet,
 )
 
 router = DefaultRouter()
@@ -12,6 +14,18 @@ router.register(
     r"services",
     ServiceOfferingViewSet,
     basename="service"
+)
+
+router.register(
+    r"providers",
+    ProviderViewSet,
+    basename="provider",
+)
+
+router.register(
+    r"slots",
+    AvailabilitySlotViewSet,
+    basename="slot",
 )
 
 urlpatterns = router.urls

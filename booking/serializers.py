@@ -1,9 +1,35 @@
 from rest_framework import serializers
 
-from booking.models import ServiceOffering
+from booking.models import (
+    ServiceOffering,
+    ProviderProfile,
+    AvailabilitySlot
+)
+
+
+class ProviderProfileSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(
+        source="user.username",
+        read_only=True,
+    )
+
+    class Meta:
+        model = ProviderProfile
+        fields = [
+            "id",
+            "username",
+            "bio",
+            "is_verified",
+        ]
 
 
 class ServiceOfferingSerializer(serializers.ModelSerializer):
+    provider = serializers.PrimaryKeyRelatedField(
+        queryset=ProviderProfile.objects.all(),
+        allow_null=True,
+        required=False,
+    )
+
     class Meta:
         model = ServiceOffering
         fields = [
@@ -12,7 +38,8 @@ class ServiceOfferingSerializer(serializers.ModelSerializer):
             "description",
             "duration_minutes",
             "price",
-            "is_active"
+            "is_active",
+            "provider"
         ]
         read_only_fields = [
             "id",
@@ -37,6 +64,87 @@ class ServiceOfferingSerializer(serializers.ModelSerializer):
                     "price": (
                         "Service longer than 120 minute cannot be free."
                     )
+                })
+
+        return attrs
+
+
+class ServiceDetailSerializer(
+    serializers.ModelSerializer
+):
+    provider = ProviderProfileSerializer(
+        read_only=True
+    )
+
+    class Meta:
+        model = ServiceOffering
+        fields = [
+            "id",
+            "title",
+            "description",
+            "duration_minutes",
+            "price",
+            "is_active",
+            "provider",
+        ]
+
+
+
+class ServiceSummarySerializer(
+    serializers.ModelSerializer
+):
+    class Meta:
+        model = ServiceOffering
+        fields = [
+            "id",
+            "title",
+            "duration_minutes",
+            "price",
+        ]
+
+
+class ProviderDetailSerializer(
+    ProviderProfileSerializer
+):
+    services = ServiceSummarySerializer(
+        many=True,
+        read_only=True
+    )
+
+    class Meta(ProviderProfileSerializer.Meta):
+        fields = (
+            ProviderProfileSerializer.Meta.fields
+            + ["services"]
+        )
+
+
+
+class AvailabilitySlotSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AvailabilitySlot
+        fields = [
+            "id",
+            "provider",
+            "start_at",
+            "end_at",
+            "is_active",
+        ]
+        read_only_fields = ["id"]
+
+    def validate(self, attrs):
+        start = attrs.get(
+            "start_at",
+            getattr(self.instance, "start_at", None)
+        )
+        end = attrs.get(
+            "end_at",
+            getattr(self.instance, "end_at", None)
+        )
+
+        if start is not None and end is not None:
+            if end <= start:
+                raise serializers.ValidationError({
+                    "end_at": "End time must be after start time."
                 })
 
         return attrs
